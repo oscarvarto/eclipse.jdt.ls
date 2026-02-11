@@ -18,6 +18,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
@@ -34,6 +35,7 @@ import org.eclipse.jdt.core.ILocalVariable;
 import org.eclipse.jdt.core.IMember;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
+import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.ISourceRange;
 import org.eclipse.jdt.core.ITypeParameter;
 import org.eclipse.jdt.core.JavaModelException;
@@ -52,6 +54,7 @@ import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavaDocSnippetStri
 import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavadocAccess;
 import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavadocAccessImpl;
 import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavadocContentAccessUtility;
+import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavaDocLocations;
 import org.eclipse.jdt.core.manipulation.internal.javadoc.CoreMarkdownAccessImpl;
 import org.eclipse.jdt.core.manipulation.internal.javadoc.IJavadocContentFactory;
 import org.eclipse.jdt.core.manipulation.internal.javadoc.JavadocLookup;
@@ -690,16 +693,42 @@ public class JavadocContentAccess2 {
 			URI javadocURI = CoreJavaElementLinks.createURIAsUri(scheme, element, refTypeName, refMemberName, refParameterTypes);
 			IJavaElement linkTarget = CoreJavaElementLinks.parseURI(javadocURI);
 			if (linkTarget == null) {
-			        return "";
+				return "";
 			}
 			try {
-			        Location locationToElement = JDTUtils.toLocation(linkTarget);
-			        if (locationToElement != null) {
-			                return locationToElement.getUri() + "#" + (locationToElement.getRange().getStart().getLine() + 1);
-			        }
+				// Try to resolve to an online javadoc URL first
+				String webUrl = resolveJavadocUrl(linkTarget);
+				if (webUrl != null) {
+					return webUrl;
+				}
+				// Fall back to jdt:// URI with line number fragment
+				Location locationToElement = JDTUtils.toLocation(linkTarget);
+				if (locationToElement != null) {
+					String lineNumber = String.valueOf(locationToElement.getRange().getStart().getLine() + 1);
+					return JDTUtils.replaceUriFragment(locationToElement.getUri(), lineNumber);
+				}
 			} catch (JavaModelException e) {
 			}
 			return "";
+		}
+
+		/**
+		 * Attempts to resolve an IJavaElement to its online javadoc URL
+		 * using the javadoc_location classpath attribute.
+		 */
+		private static String resolveJavadocUrl(IJavaElement element) {
+			try {
+				URL baseUrl = CoreJavaDocLocations.getJavadocBaseLocation(element);
+				if (baseUrl != null) {
+					URL elementUrl = CoreJavaDocLocations.getJavadocLocation(element, false);
+					if (elementUrl != null) {
+						return elementUrl.toExternalForm();
+					}
+				}
+			} catch (JavaModelException e) {
+				// ignore
+			}
+			return null;
 		}
 
 		@Override
