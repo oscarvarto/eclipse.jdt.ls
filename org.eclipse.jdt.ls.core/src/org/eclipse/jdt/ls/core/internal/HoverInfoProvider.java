@@ -330,10 +330,20 @@ public class HoverInfoProvider {
 		}
 
 		if (sourceInfo != null) {
-			// Use toLocation to get URI with line number
+			// Try to resolve to an online javadoc URL first
+			try {
+				java.net.URL javadocUrl = org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavaDocLocations.getJavadocLocation(element, false);
+				if (javadocUrl != null) {
+					return "[" + sourceInfo + "](" + javadocUrl.toExternalForm() + ")";
+				}
+			} catch (JavaModelException e) {
+				// ignore, fall through to jdt:// URI
+			}
+			// Fall back to jdt:// URI with line number
 			Location location = JDTUtils.toLocation(element);
 			if (location != null) {
-				String uri = location.getUri() + "#" + (location.getRange().getStart().getLine() + 1);
+				String lineNumber = String.valueOf(location.getRange().getStart().getLine() + 1);
+				String uri = JDTUtils.replaceUriFragment(location.getUri(), lineNumber);
 				return "[" + sourceInfo + "](" + uri + ")";
 			}
 		}

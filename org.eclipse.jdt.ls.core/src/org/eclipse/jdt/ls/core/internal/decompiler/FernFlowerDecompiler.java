@@ -227,6 +227,11 @@ public class FernFlowerDecompiler extends DecompilerImpl {
 				return;
 			}
 
+			// Only file:// URIs can be handled as file paths
+			if (uri.getScheme() != null && !"file".equals(uri.getScheme())) {
+				throw new IOException("Cannot resolve class file from URI: " + uri);
+			}
+
 			// File-based approach
 			java.nio.file.Path classPath = Paths.get(uri);
 			if (!Files.exists(classPath)) {
