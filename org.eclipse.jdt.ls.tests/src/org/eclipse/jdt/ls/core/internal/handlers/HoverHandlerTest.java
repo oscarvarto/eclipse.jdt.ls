@@ -215,7 +215,7 @@ public class HoverHandlerTest extends AbstractProjectsManagerBasedTest {
 			assertEquals(2, hover.getContents().getLeft().size());
 			assertEquals("com.aspose.words.Document.Document(String fileName) throws Exception", hover.getContents().getLeft().get(0).getRight().getValue());
 			String source = hover.getContents().getLeft().get(1).getLeft();
-			String prefix = "Source: *[aspose-words-15.12.0-jdk16.jar](jdt://contents/aspose-words-15.12.0-jdk16.jar/com.aspose.words/Document.class?";
+			String prefix = "Source: *[aspose-words-15.12.0-jdk16.jar — com.aspose.words.Document](jdt://contents/aspose-words-15.12.0-jdk16.jar/com.aspose.words/Document.class?";
 			assertTrue(source.startsWith(prefix), "Unexpected Source from " + source);
 			assertFalse(source.substring(prefix.length()).contains("("), "Source URL is not sanitized: " + source);
 		} finally {
@@ -350,7 +350,7 @@ public class HoverHandlerTest extends AbstractProjectsManagerBasedTest {
 
 		String source = hover.getContents().getLeft().get(1).getLeft();
 		//Package source should have no link
-		assertEquals("Source: *commons-cli-1.4.jar*", source, "Unexpected source");
+		assertEquals("Source: *commons-cli-1.4.jar — org.apache.commons*", source, "Unexpected source");
 
 		assertEquals(0, logListener.getErrors().size(), logListener.getErrors().toString());
 	}
@@ -472,7 +472,7 @@ public class HoverHandlerTest extends AbstractProjectsManagerBasedTest {
 
 		String source = hover.getContents().getLeft().get(2).getLeft();
 		//Project source should link to project file
-		assertMatches("Source: \\*\\[salut\\]\\(file:/.*/salut/src/main/java/java/Foo2.java#30\\)\\*", source);
+		assertMatches("Source: \\*\\[salut — java.Foo2\\]\\(file:/.*/salut/src/main/java/java/Foo2.java#30\\)\\*", source);
 
 	}
 
@@ -870,7 +870,7 @@ public class HoverHandlerTest extends AbstractProjectsManagerBasedTest {
 
 		String source = hover.getContents().getLeft().get(2).getLeft();
 		//JDK source should link to java file
-		assertMatches("Source: \\*\\[Java 10\\]\\(jdt:/.*\\)\\*", source);
+		assertMatches("Source: \\*\\[Java 10.* — java.lang.String\\]\\(jdt:/.*\\)\\*", source);
 
 	}
 
