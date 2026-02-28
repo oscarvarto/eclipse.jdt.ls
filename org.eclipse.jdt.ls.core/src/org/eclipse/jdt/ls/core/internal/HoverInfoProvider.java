@@ -33,6 +33,7 @@ import org.eclipse.jdt.core.ILocalVariable;
 import org.eclipse.jdt.core.IMember;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.ISourceRange;
 import org.eclipse.jdt.core.ITypeParameter;
@@ -330,6 +331,11 @@ public class HoverInfoProvider {
 		}
 
 		if (sourceInfo != null) {
+			// Enrich with the element's fully qualified type context
+			String elementDetail = getElementDetail(element);
+			if (elementDetail != null && !elementDetail.isEmpty()) {
+				sourceInfo += " — " + elementDetail;
+			}
 			// Try to resolve to an online javadoc URL first
 			try {
 				java.net.URL javadocUrl = org.eclipse.jdt.core.manipulation.internal.javadoc.CoreJavaDocLocations.getJavadocLocation(element, false);
@@ -343,12 +349,34 @@ public class HoverInfoProvider {
 			Location location = JDTUtils.toLocation(element);
 			if (location != null) {
 				String lineNumber = String.valueOf(location.getRange().getStart().getLine() + 1);
-				String uri = JDTUtils.replaceUriFragment(location.getUri(), lineNumber);
+				String uri = JDTUtils.cleanupURL(JDTUtils.replaceUriFragment(location.getUri(), lineNumber));
 				return "[" + sourceInfo + "](" + uri + ")";
 			}
 		}
 
 		return sourceInfo;
+	}
+
+	/**
+	 * Extracts the fully qualified type name from the given element, or the
+	 * package name if the element is a package fragment. Used to enrich the
+	 * Source link text so it shows more than just the jar name.
+	 *
+	 * @param element the Java element being hovered over
+	 * @return the fully qualified type or package name, or {@code null}
+	 */
+	private static String getElementDetail(IJavaElement element) {
+		if (element instanceof IType type) {
+			return type.getFullyQualifiedName();
+		}
+		IJavaElement ancestor = element.getAncestor(IJavaElement.TYPE);
+		if (ancestor instanceof IType type) {
+			return type.getFullyQualifiedName();
+		}
+		if (element instanceof IPackageFragment pkg) {
+			return pkg.getElementName();
+		}
+		return null;
 	}
 
 	/**
