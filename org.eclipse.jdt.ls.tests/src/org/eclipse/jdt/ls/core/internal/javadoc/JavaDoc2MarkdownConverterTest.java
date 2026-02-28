@@ -188,6 +188,25 @@ public class JavaDoc2MarkdownConverterTest extends AbstractJavadocConverterTest 
 		assertFalse(labelAndURIFromMarkdown[1].contains("(Clazz.class"), "jdt URL should not contain raw ( before .class: " + labelAndURIFromMarkdown[1]);
 	}
 
+	/**
+	 * Ensures that both ( and ) in jdt:// hrefs are percent-encoded so
+	 * Markdown link syntax [text](url) is not broken. Previously only (
+	 * was encoded due to an early-return bug in cleanupURL.
+	 */
+	@Test
+	public void testJdtLinkWithBothParenthesesInUrlAreEncoded() throws IOException {
+		String htmlWithBothParens = "<a href=\"jdt://contents/lib.jar/fj/Semigroup.java?=proj/%3Cfj(Semigroup.class#493)\">Semigroup</a>";
+		JavaDoc2MarkdownConverter converter = new JavaDoc2MarkdownConverter(htmlWithBothParens);
+		String convertedMarkdown = converter.getAsString();
+
+		String[] labelAndURIFromMarkdown = extractLabelAndURIFromLinkMarkdown(convertedMarkdown);
+		assertEquals("Semigroup", labelAndURIFromMarkdown[0]);
+		assertTrue(labelAndURIFromMarkdown[1].contains("%28Semigroup.class"), "jdt URL should contain encoded opening parenthesis: " + labelAndURIFromMarkdown[1]);
+		assertTrue(labelAndURIFromMarkdown[1].contains("#493%29"), "jdt URL should contain encoded closing parenthesis: " + labelAndURIFromMarkdown[1]);
+		assertFalse(labelAndURIFromMarkdown[1].contains("(Semigroup.class"), "jdt URL should not contain raw ( : " + labelAndURIFromMarkdown[1]);
+		assertFalse(labelAndURIFromMarkdown[1].contains("#493)"), "jdt URL should not contain raw ) : " + labelAndURIFromMarkdown[1]);
+	}
+
 	@Test
 	public void testSeeTag() throws IOException {
 		JavaDoc2MarkdownConverter converter = new JavaDoc2MarkdownConverter(RAW_JAVADOC_HTML_SEE);

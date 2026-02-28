@@ -1995,12 +1995,10 @@ public final class JDTUtils {
 		if (url == null) {
 			return url;
 		}
-		if (url.indexOf('(') > -1 ) {
-			return url.replace("(", "%28");
-		}
-		if (url.indexOf(')') > -1) {
-			return url.replace(")", "%29");
-		}
+		// Encode both parentheses in a single pass to avoid early-return bug
+		// where only ( was encoded and ) was left raw, still breaking Markdown links.
+		url = url.replace("(", "%28");
+		url = url.replace(")", "%29");
 		return url;
 	}
 
