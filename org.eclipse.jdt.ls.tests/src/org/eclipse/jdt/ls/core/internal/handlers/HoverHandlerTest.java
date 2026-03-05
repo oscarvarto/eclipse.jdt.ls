@@ -997,6 +997,45 @@ public class HoverHandlerTest extends AbstractProjectsManagerBasedTest {
 		assertEquals(expectedJavadoc, actual, "Unexpected hover ");
 	}
 
+	@Test
+	public void testHoverMarkdownCommentLinkSpacingAndSeeAnchorRendering() throws Exception {
+		String name = "java25";
+		importProjects("eclipse/" + name);
+		IProject project = getProject(name);
+		IJavaProject javaProject = JavaCore.create(project);
+		IPackageFragmentRoot packageFragmentRoot = javaProject.getPackageFragmentRoot(project.getFolder("src/main/java"));
+		IPackageFragment pack1 = packageFragmentRoot.createPackageFragment("test", false, null);
+		pack1.createCompilationUnit("Page.java", "package test;\npublic class Page {}", false, null);
+		pack1.createCompilationUnit("PlaywrightApiTest.java", "package test;\npublic class PlaywrightApiTest {}", false, null);
+		StringBuilder buf = new StringBuilder();
+		//@formatter:off
+		buf.append("package test;\n"
+				+ "/// Tests for the GitHub Issues API using Playwright's API testing support.\n"
+				+ "///\n"
+				+ "/// Demonstrates:\n"
+				+ "/// - Mixing API calls with browser-based assertions using [Page]\n"
+				+ "///\n"
+				+ "/// Extends [PlaywrightApiTest] to inherit utility methods.\n"
+				+ "///\n"
+				+ "/// @see <a href=\"https://playwright.dev/java/docs/api-testing\">Playwright: API testing</a>\n"
+				+ "public class TestGitHubAPI {}"
+		);
+		//@formatter:on
+		ICompilationUnit cu = pack1.createCompilationUnit("TestGitHubAPI.java", buf.toString(), false, null);
+		Hover hover = getHover(cu, 9, 16);
+		assertNotNull(hover);
+		assertEquals(3, hover.getContents().getLeft().size());
+
+		String actual = hover.getContents().getLeft().get(1).getLeft();
+		actual = ResourceUtils.dos2Unix(actual);
+		assertTrue(actual.contains("[Page]("), "Expected [Page] to be rendered as a markdown link: " + actual);
+		assertTrue(actual.contains("[PlaywrightApiTest]("), "Expected [PlaywrightApiTest] to be rendered as a markdown link: " + actual);
+		assertFalse(actual.contains("using  Page"), "Unexpected double-spacing around Page link label: " + actual);
+		assertFalse(actual.contains("Extends  PlaywrightApiTest  "), "Unexpected double-spacing around PlaywrightApiTest link label: " + actual);
+		assertFalse(actual.contains("<a href="), "Expected @see HTML anchor to be converted to markdown link: " + actual);
+		assertTrue(actual.contains("[Playwright: API testing](https://playwright.dev/java/docs/api-testing)"), "Expected rendered @see markdown link: " + actual);
+	}
+
 	private String getTitleHover(ICompilationUnit cu, int line, int character) {
 		// when
 		Hover hover = getHover(cu, line, character);
