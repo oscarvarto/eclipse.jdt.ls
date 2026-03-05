@@ -924,7 +924,8 @@ public final class JDTUtils {
 			URI uri = toURI(uriString);
 			if (uri != null && Objects.equals(JDT_SCHEME, uri.getScheme())) {
 				try {
-					return new URI(JDT_SCHEME, uri.getAuthority(), uri.getPath(), uri.getQuery(), fragment).toASCIIString();
+					String uriWithFragment = new URI(JDT_SCHEME, uri.getAuthority(), uri.getPath(), uri.getQuery(), fragment).toASCIIString();
+					return cleanupURL(uriWithFragment);
 				} catch (URISyntaxException e) {
 					// do nothing
 				}

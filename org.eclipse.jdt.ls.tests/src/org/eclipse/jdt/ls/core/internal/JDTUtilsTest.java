@@ -250,4 +250,13 @@ public class JDTUtilsTest extends AbstractWorkspaceTest {
 		assertTrue(resource instanceof IFolder);
 		assertEquals(originalMemberNum + 1, ((IFolder) parent).members().length, "The parent package should be aware of the newly created child package");
 	}
+
+	@Test
+	public void testReplaceUriFragmentPreservesEncodedParenthesesInJdtUri() {
+		String uri = "jdt://contents/lib.jar/pkg/Foo.java?x=%3Cpkg%28Foo.class%29";
+		String result = JDTUtils.replaceUriFragment(uri, "70");
+		assertTrue(result.contains("%28Foo.class%29"), "Expected encoded parentheses to remain in URI query: " + result);
+		assertFalse(result.contains("(Foo.class)"), "Expected no raw parentheses in URI query: " + result);
+		assertTrue(result.endsWith("#70"), "Expected fragment to be replaced: " + result);
+	}
 }

@@ -35,7 +35,6 @@ import org.eclipse.jdt.core.ILocalVariable;
 import org.eclipse.jdt.core.IMember;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
-import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.ISourceRange;
 import org.eclipse.jdt.core.ITypeParameter;
 import org.eclipse.jdt.core.JavaModelException;
@@ -175,7 +174,11 @@ public class JavadocContentAccess2 {
 					collectTagElements(content, element, t, buf);
 				}
 			} else if (e instanceof TextElement) {
-				buf.append(((TextElement) e).getText());
+				String text = ((TextElement) e).getText();
+				if (TagElement.TAG_SEE.equals(tag.getTagName()) && text.contains("<a")) {
+					text = convertHtmlAnchorsToMarkdown(text);
+				}
+				buf.append(text);
 			} else if ("@see".equals(tag.getTagName())) {
 				collectLinkedTag(element, tag, buf);
 			} else {
@@ -192,7 +195,9 @@ public class JavadocContentAccess2 {
 						buf.append("\n");
 					}
 				} else {
-					buf.append(" ");
+					if (!endsWithWhitespace(buf) && !startsWithWhitespace(next)) {
+						buf.append(" ");
+					}
 				}
 			}
 		}
@@ -216,10 +221,19 @@ public class JavadocContentAccess2 {
 						linkTitle = res[0];
 					}
 				}
-				buf.append("[" + linkTitle + "]");
+				res = trimStrings(res);
+				linkTitle = linkTitle == null ? "" : linkTitle.trim();
+				if (linkTitle.isEmpty()) {
+					linkTitle = res[0];
+				}
 				String uri = JdtLsJavadocAccessImpl.createLinkURIHelper(CoreJavaElementLinks.JAVADOC_SCHEME, element, res[0], res.length > 1 ? res[1] : null,
-						res.length > 2 ? Arrays.asList(res).subList(2, res.length).toArray(new String[0]) : null);
-				buf.append("(" + uri + ")");
+					res.length > 2 ? Arrays.asList(res).subList(2, res.length).toArray(new String[0]) : null);
+				if (uri == null || uri.isBlank()) {
+					buf.append(linkTitle);
+				} else {
+					buf.append("[").append(linkTitle).append("]");
+					buf.append("(").append(uri).append(")");
+				}
 			} catch (URISyntaxException ex) {
 				JavaManipulationPlugin.log(ex);
 			}
@@ -261,14 +275,46 @@ public class JavadocContentAccess2 {
 			refTypeName = ((TextElement) e).getText();
 		}
 		List<String> result = new ArrayList<>();
-		result.add(refTypeName);
+		result.add(refTypeName == null ? "" : refTypeName.trim());
 		if (refMemberName != null) {
-			result.add(refMemberName);
+			result.add(refMemberName.trim());
 		}
 		if (refMethodParamTypes != null) {
-			result.addAll(Arrays.asList(refMethodParamTypes));
+			for (String refMethodParamType : refMethodParamTypes) {
+				result.add(refMethodParamType == null ? null : refMethodParamType.trim());
+			}
 		}
 		return result.toArray(new String[0]);
+	}
+
+	private static String convertHtmlAnchorsToMarkdown(String text) {
+		try {
+			return new JavaDoc2MarkdownConverter(text).getAsString();
+		} catch (IOException e) {
+			return text;
+		}
+	}
+
+	private static boolean endsWithWhitespace(StringBuilder buf) {
+		return !buf.isEmpty() && Character.isWhitespace(buf.charAt(buf.length() - 1));
+	}
+
+	private static boolean startsWithWhitespace(ASTNode node) {
+		if (node instanceof TextElement textElement) {
+			String text = textElement.getText();
+			return !text.isEmpty() && Character.isWhitespace(text.charAt(0));
+		}
+		return false;
+	}
+
+	private static String[] trimStrings(String[] values) {
+		String[] result = Arrays.copyOf(values, values.length);
+		for (int i = 0; i < result.length; i++) {
+			if (result[i] != null) {
+				result[i] = result[i].trim();
+			}
+		}
+		return result;
 	}
 
 	/**
